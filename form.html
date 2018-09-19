@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	<title>Stripe Tester</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+	<div>
+	    <!-- get our config vars -->
+	    <script src="config.js"></script>
+
+	    <form name="visible" onSubmit="return false;" method="post">	
+		<table>
+		    <tr><td colspan="3" align="center"><h2 id="title">Form Title (edit in config.js)</h2></td></tr>
+		    <tr><td colspan="2">Donation Amount (USD)</td><td>$ <input type="number" id="visible_amount" name="visible_amount" value="5.00"></td></tr>
+		    <tr><td><input type="checkbox" id="anon" name="anon"></td><td colspan="2">I wish to remain anonymous</td></tr>
+		    <tr><td colspan="3"><button id="donateButton">Donate!</button></td></tr>
+		    <tr><td colspan="3"><button id="postButton">Post to Self!</button></td></tr>
+
+		    <!--Debug rows - NONE of these should actually be needed in the final form -->
+		    <tr><td></td></tr>
+		    <tr><td colspan="3" align="center"><div id="debug_text">Debugging Convenience Fields</div></td></tr>
+		    <tr><td colspan="2"><input type="text" id="description" name="description" value="Donation"></td></tr>
+		    <tr><td colspan="2"><input type="text" id="staged_amount" name="staged_amount" value=""></td></tr>
+		    <tr><td colspan="2"><input type="text" id="token_debug" name="token_debug" value=""></td></tr>
+		    <tr><td colspan="3"><input type="text" id="response" name="response" value=""></td></tr>
+		    <!-- /debug -->
+
+		</table>
+	    </form>
+
+
+	    <script>
+		//snag the visible form title from config file
+		document.getElementById('title').innerHTML = form_title;
+		
+		if (!debug_mode) {
+		    var hide_me = ['description', 'staged_amount', 'token_debug', 'response', 'debug_text', 'postButton'];
+		    for (i=0; i<hide_me.length; ++i){
+			hide_this = document.getElementById(hide_me[i]);
+			if(hide_this.nodeName === 'INPUT'){
+			    hide_this.type = 'hidden';
+			} else {
+			    hide_this.style = "visibility:hidden";
+			}
+		    }
+		}
+		
+		function stageAmount(){
+		    var staged_amount = parseInt(document.getElementById('visible_amount').value) * 100;
+		    document.getElementById('staged_amount').value = staged_amount;
+		    return staged_amount;
+		}
+		
+		function stageDescription(){
+		    var staged_description = "";
+		    if (document.getElementById('anon').checked) {
+			staged_description = "Anonymous Donation";
+		    } else {
+			staged_description = "Donation";
+		    }
+		    document.getElementById('description').value = staged_description;
+		    return staged_description;
+		}
+		
+		document.getElementById('visible_amount').addEventListener('change', stageAmount);
+		document.getElementById('anon').addEventListener('click', stageDescription);
+
+		
+		//And the rest is Stripe code, from Stripe, doing stripey things.
+
+		function postToMe(source) {
+		    document.getElementById('response').value = "posting...";
+		    
+		    var amount = stageAmount();
+		    var currency = "usd";
+		    var description = stageDescription();
+		    var send_string = "amount=" + amount + "&currency=" + currency + "&description=" + description + "&source=" + source;
+		    
+		    var send_data = encodeURI(send_string);
+		    
+		    var xhttp = new XMLHttpRequest();
+		    xhttp.open("POST", post_to_url, true);
+		    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		    xhttp.onreadystatechange = function() {
+			//TODO: Something here if we get a not-200 response...
+			//but the state changes twice, so don't go too crazy? ha.
+			alert(xhttp.status); //this is always zero for some reason.
+			};
+		    xhttp.send(send_data);
+
+		}
+		
+		document.getElementById('postButton').addEventListener('click', postToMe);
+		
+		document.getElementById('donateButton').addEventListener('click', function (e) {
+		    // Load the external stripe checkout javascript *after* the uesr
+		    // expresses intent to donate, instead of before.
+		    var script = document.createElement('script');
+		    script.src = "https://checkout.stripe.com/checkout.js";
+		    //TODO: We need a spinner here. 5 seconds or something. :/
+		    document.getElementsByTagName('head')[0].appendChild(script);
+
+		    script.onload= function() {
+			displayStripeStuff();
+		    }
+		});
+		
+		function displayStripeStuff(){
+		    var handler = StripeCheckout.configure({
+		      key: public_key,
+		      image: 'favicon.png',
+		      locale: 'auto',
+		      zipCode: true,
+		      token: function(token) {
+			// You can access the token ID with `token.id`.
+			// Get the token ID to your server-side code for use.
+			document.getElementById('token_debug').value = token.id; //for debugging
+			var source = token.id;
+//			var email = token.
+			postToMe(source);
+			    }
+			});
+
+			// Open Checkout with further options:
+			handler.open({
+			    name: form_title,
+			    description: document.getElementById('description').value,
+			    amount: document.getElementById('staged_amount').value,
+			    zipCode: true
+			});
+			e.preventDefault();
+
+		    // Close Checkout on page navigation:
+			window.addEventListener('popstate', function () {
+			    handler.close();
+			});
+		};
+		
+	    </script>
+
+	</div>
+    </body>
+</html>
