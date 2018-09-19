@@ -1,11 +1,8 @@
 <?php
 
-/* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+require_once 'config.php';
 
+//these are the keys that we expect to be useful to the backend.
 $relevant_keys = array(
     'amount',
     'currency',
@@ -14,22 +11,19 @@ $relevant_keys = array(
     'receipt_email',
 );
 
+//debug: - what got posted to us. 
+echo "<pre>";
 foreach ($_REQUEST as $thing => $stuff) {
 
     echo "$thing = $stuff\n";
 }
-
 echo "</pre>";
 
-
-//cURL stuff goes here...
-
+//now, let's get real and scrub everything we don't want.
 $data = array();
 foreach ($relevant_keys as $key) {
     $data[$key] = @$_REQUEST[$key];
 }
-
-//echo print_r($data);
 
 $response = curl_transaction('https://api.stripe.com/v1/charges', $data);
 
@@ -37,6 +31,7 @@ echolog("Response Type = '" . gettype($response) . "'");
 
 function echolog($string) {
     echo "\n\t$string";
+    //TODO: Also log if you were going to really use this, for real.
 }
 
 /**
@@ -77,7 +72,7 @@ function curl_transaction($url, $data = false) {
 	CURLOPT_RETURNTRANSFER => 1,
 	CURLOPT_TIMEOUT => 30,
 	CURLOPT_FOLLOWLOCATION => 0,
-	//TODO: The next two
+	//TODO: The next two, if you were going to really use this for real.
 	//CURLOPT_SSL_VERIFYPEER => 1,
 	//CURLOPT_SSL_VERIFYHOST => 2,
 	CURLOPT_FORBID_REUSE => true,
