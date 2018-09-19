@@ -14,17 +14,18 @@
 		<table>
 		    <tr><td colspan="3" align="center"><h2 id="title">Form Title (edit in config.js)</h2></td></tr>
 		    <tr><td colspan="2">Donation Amount (USD)</td><td>$ <input type="number" id="visible_amount" name="visible_amount" value="5.00"></td></tr>
-		    <tr><td><input type="checkbox" id="anon" name="anon"></td><td colspan="2">I wish to remain anonymous</td></tr>
+		    <tr><td width="25" align="right"><input type="checkbox" id="anon" name="anon"></td><td colspan="2">I wish to remain anonymous</td></tr>
 		    <tr><td colspan="3"><button id="donateButton">Donate!</button></td></tr>
-		    <tr><td colspan="3"><button id="postButton">Post to Self!</button></td></tr>
-
-		    <!--Debug rows - NONE of these should actually be needed in the final form -->
+		</table>
+		<!--Debug rows - NONE of these should actually be needed in the final form -->
+		<table style="padding-top:150px;">
 		    <tr><td></td></tr>
 		    <tr><td colspan="3" align="center"><div id="debug_text">Debugging Convenience Fields</div></td></tr>
-		    <tr><td colspan="2"><input type="text" id="description" name="description" value="Donation"></td></tr>
-		    <tr><td colspan="2"><input type="text" id="staged_amount" name="staged_amount" value=""></td></tr>
-		    <tr><td colspan="2"><input type="text" id="token_debug" name="token_debug" value=""></td></tr>
-		    <tr><td colspan="3"><input type="text" id="response" name="response" value=""></td></tr>
+		    <tr><td colspan="3"><button id="postButton">Post to Self!</button></td></tr>
+		    <tr><td colspan="2"><input type="text" id="description" name="description" value="Donation" disabled></td></tr>
+		    <tr><td colspan="2"><input type="text" id="staged_amount" name="staged_amount" value="" disabled></td></tr>
+		    <tr><td colspan="2"><input type="text" id="token_debug" name="token_debug" value="" disabled></td></tr>
+		    <tr><td colspan="3"><input type="text" id="response" name="response" value="" disabled></td></tr>
 		    <!-- /debug -->
 
 		</table>
@@ -70,13 +71,13 @@
 		
 		//And the rest is Stripe code, from Stripe, doing stripey things.
 
-		function postToMe(source) {
+		function postToMe(source, email) {
 		    document.getElementById('response').value = "posting...";
 		    
 		    var amount = stageAmount();
 		    var currency = "usd";
 		    var description = stageDescription();
-		    var send_string = "amount=" + amount + "&currency=" + currency + "&description=" + description + "&source=" + source;
+		    var send_string = "amount=" + amount + "&currency=" + currency + "&description=" + description + "&source=" + source + "&receipt_email" + email;
 		    
 		    var send_data = encodeURI(send_string);
 		    
@@ -86,7 +87,7 @@
 		    xhttp.onreadystatechange = function() {
 			//TODO: Something here if we get a not-200 response...
 			//but the state changes twice, so don't go too crazy? ha.
-			alert(xhttp.status); //this is always zero for some reason.
+			//alert(xhttp.status); //this is always zero for some reason.
 			};
 		    xhttp.send(send_data);
 
@@ -118,8 +119,8 @@
 			// Get the token ID to your server-side code for use.
 			document.getElementById('token_debug').value = token.id; //for debugging
 			var source = token.id;
-//			var email = token.
-			postToMe(source);
+			var email = token.email;
+			postToMe(source, email);
 			    }
 			});
 
