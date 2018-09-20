@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<head></head>
+
+<!--Paste these bits into your prod page, after filling out the real information in the *** ACTUAL *** variables. -->
+<!-- ...seriously, just Find All "*** ACTUAL" and put real stuff in there. -->
+
+<form name="stripey" onSubmit="return false;" method="post">	
+    <table>
+	<tr><td colspan="3" align="center"><h2 id="title">*** ACTUAL FORM TITLE***</h2></td></tr>
+	<tr><td colspan="2">Donation Amount (USD)</td><td>$ <input type="number" id="visible_amount" name="visible_amount" value="5.00"></td></tr>
+	<tr><td width="25" align="right"><input type="checkbox" id="anon" name="anon"></td><td colspan="2">I wish to remain anonymous</td></tr>
+	<tr><td colspan="3"><button id="donateButton">Donate!</button></td></tr>
+    </table>
+</form>
+
+
+<script>
+    
+    /** staging functions, to take form inputs from humans, and turn them into 
+    data Stripe understands **/
+    
+    //Like most payment processors, stripe wants all the amounts in cents.
+    function stageAmount(){
+	var staged_amount = parseInt(document.getElementById('visible_amount').value) * 100;
+	return staged_amount;
+    }
+
+    //If the user wishes to be anonymous, describe their donation(purchase) as 
+    //an "Anonymous Donation" rather than a standard "Donation". 
+    function stageDescription(){
+	var staged_description = "";
+	if (document.getElementById('anon').checked) {
+	    staged_description = "Anonymous Donation";
+	} else {
+	    staged_description = "Donation";
+	}
+	return staged_description;
+    }
+
+
+    /** Stripe Integration Javascript **/
+
+    //post the staged data to our backend, which will post to Stripe
+    function postToMe(source, email) {
+	var amount = stageAmount();
+	var currency = "usd";
+	var description = stageDescription();
+
+	//I really want there to be a better way to do this.
+	var send_string = "amount=" + amount + "&currency=" + currency + "&description=" + description + "&source=" + source + "&receipt_email=" + email;
+	var send_data = encodeURI(send_string);
+
+	//Actually post to ourselves
+	var xhttp = new XMLHttpRequest();
+	xhttp.open("POST", "*** ACTUAL URL TO POST TO ***", true);
+	xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhttp.onreadystatechange = function () {
+	    //TODO: Something here if we get a not-200 response...
+	    //but the state changes twice, so don't assume a not-200 once is the 
+	    //end of the world... 
+	    //or in this case, the end of the payment attempt.
+	};
+	xhttp.send(send_data);
+    }
+
+    //Donate button onClick function. Because we don't want to expose people to
+    //third-party donation code before they have chosen to donate, we load 
+    //Stripe's checkout.js on Donate click, and not before. Everything that 
+    //would usually be in this onClick that depends on checkout.js being loaded 
+    //is summarily shoved in displayStripeStuff()
+    document.getElementById('donateButton').addEventListener('click', function (e) {
+	// Load the external stripe checkout javascript *after* the uesr
+	// expresses clear intent to donate, instead of before.
+	var script = document.createElement('script');
+	script.src = "https://checkout.stripe.com/checkout.js";
+
+	//TODO: We need a spinner here, that gets turned off in 
+	//displayStripeStuff()
+	document.getElementsByTagName('head')[0].appendChild(script);
+
+	script.onload = function () {
+	    displayStripeStuff();
+	};
+    });
+
+    //The Stripe Stuff defined in checkout.js that we need, gets called here
+    function displayStripeStuff() {
+	var handler = StripeCheckout.configure({
+	    key: "*** ACTUAL PUBLIC KEY ***",
+	    image: 'favicon.png',
+	    locale: 'auto',
+	    zipCode: true,
+	    token: function (token) {
+		var source = token.id; //from a stripe response to their form getting filled out.
+		var email = token.email; //from the same stripe response
+		postToMe(source, email);
+	    }
+	});
+
+	// Open Checkout with further options:
+	handler.open({
+	    name: "*** ACTUAL FORM TITLE ***",
+	    description: stageDescription(),
+	    amount: stageAmount(),
+	    zipCode: true
+	});
+	e.preventDefault();
+
+	// Close Checkout on page navigation:
+	window.addEventListener('popstate', function () {
+	    handler.close();
+	});
+    };
+
+</script>

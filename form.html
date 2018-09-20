@@ -127,8 +127,8 @@
 			// Open Checkout with further options:
 			handler.open({
 			    name: form_title,
-			    description: document.getElementById('description').value,
-			    amount: document.getElementById('staged_amount').value,
+			    description: stageDescription(),
+			    amount: stageAmount(),
 			    zipCode: true
 			});
 			e.preventDefault();
