@@ -6,7 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
-	<div>
+	<div id="paypane">
 	    <!-- get our config vars -->
 	    <script src="config.js"></script>
 
@@ -87,15 +87,57 @@
 		    xhttp.onreadystatechange = function() {
 			//TODO: Something here if we get a not-200 response...
 			//but the state changes twice, so don't go too crazy? ha.
-			//alert(xhttp.status); //this is always zero for some reason.
+			//alert(xhttp.status); //If this is always zero, check your Access-Control-Allow-Origin headers...
+			
+			//we are looking for the ready status, so... 4?
+			 if(xhttp.readyState==4){
+			    displayPaymentResults(xhttp);
+			 }
+			
 			};
 		    xhttp.send(send_data);
 
 		}
 		
+		function displayPaymentResults(xhttp){
+		    var display_text = "Oops! Something went wrong processing your payment. Please try again later.";
+		    switch (xhttp.status){
+			case 200:
+			case 400:
+			    //in our case, sometimes 400 errors are fine... which is a mess.
+			    var response_ok = false;
+			    var response_text = xhttp.responseText;
+			    if (response_text != ''){
+				//look for an error in the JSON format
+				var json = JSON.parse(response_text);
+				//document.getElementById("paypane").innerHTML = json[0];
+				//TODO: If there's an "error" node...
+				if (!json.hasOwnProperty('error')) {
+				    response_ok = true;
+				}
+			    } else {
+				//in our case, everything is great if the response is nothing.
+				response_ok = true;
+			    }
+			    
+			    if (response_ok) {
+				display_text = "Thank you! Your payment has been received.";
+			    }
+			    
+			    break;
+			//default:
+			    //nothing, actually. We're defaulting to failure. (ha)
+		    }
+		    
+		    //TODO: Actually set the pane value in here...
+		    document.getElementById('paypane').innerHTML = display_text;
+		}
+		
+		
 		document.getElementById('postButton').addEventListener('click', postToMe);
 		
 		document.getElementById('donateButton').addEventListener('click', function (e) {
+		    tempDisableButton();
 		    // Load the external stripe checkout javascript *after* the uesr
 		    // expresses intent to donate, instead of before.
 		    var script = document.createElement('script');
@@ -117,6 +159,7 @@
 		      token: function(token) {
 			// You can access the token ID with `token.id`.
 			// Get the token ID to your server-side code for use.
+			document.getElementById('donateButton').disabled = true; //if we get here, we're done with this button.
 			document.getElementById('token_debug').value = token.id; //for debugging
 			var source = token.id;
 			var email = token.email;
@@ -131,13 +174,19 @@
 			    amount: stageAmount(),
 			    zipCode: true
 			});
-			e.preventDefault();
 
 		    // Close Checkout on page navigation:
 			window.addEventListener('popstate', function () {
 			    handler.close();
 			});
 		};
+		
+		//so cheap, though...
+		function tempDisableButton(){
+		    document.getElementById('donateButton').disabled = true;
+		    //and because Stripe events are a mess...
+		    setTimeout(function() { document.getElementById('donateButton').disabled = false; }, 3000);
+		}
 		
 	    </script>
 
